@@ -1,6 +1,4 @@
 #include "ast/ast.hpp"
-#include "ast/treevisitor.hpp"
-#include "common/compiler.hpp"
 #include "lexer/scope.hpp"
 
 namespace kvantum
@@ -63,4 +61,6 @@ namespace kvantum
        }
        return i == this->params.size() && eq;
    }
+
+   array<Annotation,Annotation::ANNOTATION_NUMBER> Annotation::annotations = {Annotation(Type::Native)};
 }

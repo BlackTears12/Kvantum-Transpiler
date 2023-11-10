@@ -2,6 +2,7 @@
 #include <string>
 #include <map>
 #include <queue>
+#include <utility>
 using std::string;
 using std::map;
 using std::queue;
@@ -10,7 +11,7 @@ namespace kvantum
 {
 	struct Error
 	{
-		Error(string msg, string mod, unsigned int ln) : message(msg), moduleName(mod), lineIndex(ln) {}
+		Error(string msg, string mod, unsigned int ln) : message(std::move(msg)), moduleName(std::move(mod)), lineIndex(ln) {}
 
 		string message;
 		string moduleName;
@@ -26,7 +27,7 @@ namespace kvantum
 		static void log(string msg);
 		static void setVerbosity(Verbosity v) { verbosity = v; }
 
-		static void setWorkingModule(string modname) { workModule = modname; }
+		static void setWorkingModule(string modname) { workModule = std::move(modname); }
 		static void setLineIndex(unsigned int lnIndex) { lineIndex = lnIndex; }
 
 		static bool hasError() { return !errors.empty(); }

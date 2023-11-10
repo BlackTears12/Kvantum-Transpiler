@@ -15,7 +15,7 @@ namespace c::ast
    Type* Type::getPointer(Type* t){ return new Pointer(t); }
    Type* Type::getStruct(Struct* s)
    {
-	   if(StructType::mappedStructs.contains(s))
+	   if(StructType::mappedStructs.count(s))
 		   return StructType::mappedStructs[s];
 	   auto st = new StructType(s);
 	   StructType::mappedStructs.insert({s,st});

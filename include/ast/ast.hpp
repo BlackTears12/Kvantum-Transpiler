@@ -1,13 +1,16 @@
 #pragma once
+
 #include <string>
 #include <optional>
 #include <memory>
 #include "common/mainheader.hpp"
+#include "common/type.hpp"
+#include "common/token.hpp"
+#include "ast/annotation.hpp"
 #include "ast/statementvisitor.hpp"
 #include "ast/expressionvisitor.hpp"
-#include "common/token.hpp"
-#include "common/type.hpp"
 #include "lexer/lexer.hpp"
+
 using std::string;
 using std::optional;
 using std::unique_ptr;
@@ -16,456 +19,511 @@ using std::make_unique;
 /*
    defines operationVisit virtual function override
    its required by codebuilder methods
-   MUST BE INSERTED INTO STATEMENT CLASS DEFNITIONS
+   MUST BE INSERTED INTO STATEMENT CLASS DEFINITIONS
 */
 #define STATEMENT_NODE any operationVisit(StatementVisitor* visitor) override { visitor->visit(this); return KVANTUM_SKIP; }
 /*
    defines operationVisit virtual function override
    its required by codebuilder methods
-   MUST BE INSERTED INTO EXPRESSION CLASS DEFNITIONS
+   MUST BE INSERTED INTO EXPRESSION CLASS DEFINITIONS
 */
 #define EXPRESSION_NODE any operationVisit(ExpressionVisitor* visitor) override { return visitor->visit(this);}
 
 
 namespace kvantum
-{     
-   struct FunctionNode;
+{
+    struct FunctionNode;
 
-   class AST_Node{
-   public:
-      AST_Node() { lineIndex = Diagnostics::getLineIndex(); }
-      virtual ~AST_Node(){}
-      
-      template <typename T>
-      T as(){ return static_cast<T>(this); }
+    class AST_Node
+    {
+    public:
+        AST_Node() { lineIndex = Diagnostics::getLineIndex(); }
+        virtual ~AST_Node() {}
 
-      unsigned int lineIndex;
-   };
+        template<typename T>
+        T as() { return static_cast<T>(this); }
 
-   enum class ExprType{
-      BINARY_OPERATION,LITERAL,VARIABLE,FUNCTION_CALL,FIELD,DYNAMIC_ALLOCATION,ARRAY_EXPR,ARRAY_INDEX,TAKE_REFERENCE,CAST
-   };
+        unsigned int lineIndex;
+    };
 
-   class Expression : public AST_Node{
-   public:
-      Expression(ExprType t){
-         exprtype = t;
-      }
-      virtual ~Expression(){}
-      virtual any operationVisit(ExpressionVisitor* visitor) = 0;
+    enum class ExprType
+    {
+        BINARY_OPERATION, LITERAL, VARIABLE, FUNCTION_CALL, DYNAMIC_ALLOCATION, ARRAY_EXPR, ARRAY_INDEX, TAKE_REFERENCE, CAST
+    };
 
-      virtual Expression* copy() = 0;
-      ExprType exprtype;
-      virtual Type& getType() = 0;
-   };
+    class Expression : public AST_Node
+    {
+    public:
+        Expression(ExprType t)
+        {
+            exprtype = t;
+        }
+        virtual ~Expression() {}
+        virtual any operationVisit(ExpressionVisitor* visitor) = 0;
 
-   class BinaryOperation : public Expression{
-   public:
-      EXPRESSION_NODE
-      enum Operator{ADD,SUBTRACT,MULTIPLY,DIVIDE,EQUAL,NOT_EQUAL,LESS,LESS_OR_EQUAL,GREATER,GREATER_OR_EQUAL,AND,OR};
+        virtual Expression* copy() = 0;
+        ExprType exprtype;
+        virtual Type &getType() = 0;
+    };
 
-      BinaryOperation(Expression* lhs,Expression* rhs,Operator op) : Expression(ExprType::BINARY_OPERATION)
-      {
-         this->op = op;
-         this->lhs = lhs;
-         this->rhs = rhs;
-      }
+    class BinaryOperation : public Expression
+    {
+    public:
+        EXPRESSION_NODE
+        enum Operator
+        {
+            ADD, SUBTRACT, MULTIPLY, DIVIDE, EQUAL, NOT_EQUAL, LESS, LESS_OR_EQUAL, GREATER, GREATER_OR_EQUAL, AND, OR
+        };
 
-      ~BinaryOperation()
-      {
-          delete lhs;
-          delete rhs;
-      }
+        BinaryOperation(Expression* lhs, Expression* rhs, Operator op) : Expression(ExprType::BINARY_OPERATION)
+        {
+            this->op = op;
+            this->lhs = lhs;
+            this->rhs = rhs;
+        }
 
-      Type& getType() override{
-          if (isBool())
-              return PrimitiveType::get(PrimitiveType::Boolean);
-         if(lhs != nullptr)
+        ~BinaryOperation()
+        {
+            delete lhs;
+            delete rhs;
+        }
+
+        Type &getType() override
+        {
+            if (isBool())
+                return PrimitiveType::get(PrimitiveType::Boolean);
+            if (lhs != nullptr)
+                return rhs->getType();
             return rhs->getType();
-         return rhs->getType();
-      }
+        }
 
-      BinaryOperation* copy() override { return new BinaryOperation(lhs->copy(),rhs->copy(),op); }
-      bool isBool() { return op >= EQUAL; }
+        BinaryOperation* copy() override { return new BinaryOperation(lhs->copy(), rhs->copy(), op); }
+        bool isBool() { return op >= EQUAL; }
 
-      Expression* lhs;
-      Expression* rhs;
-      Operator op;
-   };
+        Expression* lhs;
+        Expression* rhs;
+        Operator op;
+    };
 
-   class Literal : public Expression{
-   public:
-      EXPRESSION_NODE
-      Literal(string v,Type& t) : Expression(ExprType::LITERAL),type(t){
-         value = v;
-      }
-      
-      Type& getType() override{
-         return type;
-      }
+    class Literal : public Expression
+    {
+    public:
+        EXPRESSION_NODE
+        Literal(string v, Type &t) : Expression(ExprType::LITERAL), type(t)
+        {
+            value = v;
+        }
 
-      Literal* copy() override { return new Literal(value,type); }
+        Type &getType() override
+        {
+            return type;
+        }
 
-      string value;
-      Type& type;
-   };
+        Literal* copy() override { return new Literal(value, type); }
 
-   class FieldAccess;
-   class Variable : public Expression{
-   public:
-      EXPRESSION_NODE
+        string value;
+        Type &type;
+    };
 
-      Variable(string i,Type& t = Type::get("Void")) : Expression(ExprType::VARIABLE),type(t)
-      {
-         id = i;
-      }
-      
-      Type& getType() override{ return type; }
+    class FieldAccess;
+    class Variable : public Expression
+    {
+    public:
+        EXPRESSION_NODE
 
-      virtual Variable* end(){ return this; }
+        Variable(string i, Type &t = Type::get("Void")) : Expression(ExprType::VARIABLE), type(&t)
+        {
+            id = i;
+        }
 
-      virtual bool isField(){ return false; }
-      FieldAccess* asField();
-      Variable* copy() override { return new Variable(id,type); }
+        Type &getType() override { return *type; }
 
-      string id;
-      Type& type;
-   };
-   
-   class FieldAccess : public Variable
-   {
-   public:  
-      FieldAccess(Expression* b,Variable* f) : Variable(*f)
-      {
-         base = b;
-         field = f;
-      }
+        virtual Variable* end() { return this; }
+        virtual void setType(Type& t) { type = &t; }
 
-      ~FieldAccess()
-      {
-          delete base;
-          delete field;
-      }
+        virtual bool isField() { return false; }
+        FieldAccess* asField();
+        Variable* copy() override { return new Variable(id, *type); }
 
-      Type& getType() override { return field->getType(); }
-      bool isField() override { return true; }
-      Variable* end() {return field->end(); }
+        string id;
+        Type* type;
+    };
 
-      FieldAccess* copy() override { return new FieldAccess(base->copy(),field->copy()); }
-      Expression* base;
-      Variable* field;
-   };
+    class FieldAccess : public Variable
+    {
+    public:
+        FieldAccess(Expression* b, Variable* f) : Variable(*f)
+        {
+            base = b;
+            field = f;
+        }
 
-   class DynamicAllocation : public Expression{
-   public:
-      EXPRESSION_NODE
-      DynamicAllocation(Type& n) : Expression(ExprType::DYNAMIC_ALLOCATION), node(n)
-      {
-         sizeExpr = new Literal(std::to_string(node.getAllocSize()),Type::get("Int"));
-      }
-      
-      Type& getType() override{
-         return node;
-      }
+        ~FieldAccess()
+        {
+            delete base;
+            delete field;
+        }
 
-      DynamicAllocation* copy() override{ return new DynamicAllocation(node); }
-      virtual Expression* getSizeExpr() { return  sizeExpr; }
-      
-      Expression* sizeExpr;
-      Type& node;
-   };
+        Type &getType() override { return field->getType(); }
+        bool isField() override { return true; }
+        Variable* end() { return field->end(); }
 
-   class ArrayExpression : public Expression{
-   public:
-      EXPRESSION_NODE
-      ArrayExpression(Type& t,vector<Literal*> init) : Expression(ExprType::ARRAY_EXPR),initializer(init),type(ArrayType::get(t)){}
-      
-      Type& getType() override { return type; }
-      ArrayExpression* copy() override { return new ArrayExpression(type,apply(initializer.begin(),initializer.end(),std::function([](Literal* l){ return l->copy(); }))); }
+        FieldAccess* copy() override { return new FieldAccess(base->copy(), field->copy()); }
+        Expression* base;
+        Variable* field;
+    };
 
-      vector<Literal*> initializer;
-      ArrayType& type;
-   };
+    class DynamicAllocation : public Expression
+    {
+    public:
+        EXPRESSION_NODE
+        DynamicAllocation(Type &n) : Expression(ExprType::DYNAMIC_ALLOCATION), node(n)
+        {
+            sizeExpr = new Literal(std::to_string(node.getAllocSize()), Type::get("Int"));
+        }
 
-   class ArrayAllocation : public DynamicAllocation 
-   {
-   public:
-       ArrayAllocation(Type& itemT,Variable* sizeV) : DynamicAllocation(itemT),itemType(itemT)
-       {
-           itemType = itemT;
-           sizeVar = sizeV;
-           sizeExpr = new BinaryOperation(sizeExpr,sizeVar,BinaryOperation::MULTIPLY);
-       }
+        Type &getType() override
+        {
+            return ReferenceType::get(node);
+        }
 
-       Type& getType() override {
-           return node;
-       }
+        DynamicAllocation* copy() override { return new DynamicAllocation(node); }
+        virtual Expression* getSizeExpr() { return sizeExpr; }
 
-       ArrayAllocation* copy() override { return new ArrayAllocation(itemType,sizeVar->copy()); }
-       virtual Expression* getSizeExpr() { return sizeExpr; }
+        Expression* sizeExpr;
+        Type &node;
+    };
 
-       Type& itemType;
-       Variable* sizeVar;
-   };
+    class ArrayExpression : public Expression
+    {
+    public:
+        EXPRESSION_NODE
+        ArrayExpression(Type &t, vector<Literal*> init) : Expression(ExprType::ARRAY_EXPR), initializer(init), type(ArrayType::get(t)) {}
 
-   class ArrayIndex : public Expression
-   {
-   public:
-       EXPRESSION_NODE
-       ArrayIndex(Expression* arr,Expression* ind) : Expression(ExprType::ARRAY_INDEX)
-       {
-           baseArray = arr;
-           index = ind;
-       }
+        Type &getType() override { return type; }
+        ArrayExpression* copy() override { return new ArrayExpression(type, apply(initializer.begin(), initializer.end(), std::function([](Literal* l) { return l->copy(); }))); }
 
-       Type& getType() override { return baseArray->getType().asArray().getType(); }
-       ArrayIndex* copy() override { return new ArrayIndex(baseArray->copy(),index->copy()); }
+        vector<Literal*> initializer;
+        ArrayType &type;
+    };
 
-       Expression* baseArray;
-       Expression* index;
-   };
+    class ArrayAllocation : public DynamicAllocation
+    {
+    public:
+        ArrayAllocation(Type &itemT, Variable* sizeV) : DynamicAllocation(itemT), itemType(itemT)
+        {
+            itemType = itemT;
+            sizeVar = sizeV;
+            sizeExpr = new BinaryOperation(sizeExpr, sizeVar, BinaryOperation::MULTIPLY);
+        }
 
-   class Cast : public Expression
-   {
-   public:
-       EXPRESSION_NODE
-       Cast(Expression* expr,Type& to) : Expression(ExprType::CAST),castTo(to)
-       {
-           this->expr = expr;
-       }
-       Type& getType() override { return castTo; }
-       Cast* copy() override { return new Cast(expr->copy(), castTo); }
+        Type &getType() override
+        {
+            return node;
+        }
 
-       Expression* expr;
-       Type& castTo;
-   };
+        ArrayAllocation* copy() override { return new ArrayAllocation(itemType, sizeVar->copy()); }
+        Expression* getSizeExpr() override { return sizeExpr; }
 
-   enum class StatementType{
-      ASSIGMENT,RETURN,FUNCTION_CALL,IF_ELSE,WHILE,FOR,BLOCK
-   };
+        Type &itemType;
+        Variable* sizeVar;
+    };
 
-   class Statement : public AST_Node{
-   public:
-      Statement(StatementType t){
-         sttype = t;
-      }
-      virtual ~Statement(){};
-      virtual any operationVisit(StatementVisitor* visitor) = 0;
-      virtual Statement* copy() = 0;
+    class ArrayIndex : public Expression
+    {
+    public:
+        EXPRESSION_NODE
+        ArrayIndex(Expression* arr, Expression* ind) : Expression(ExprType::ARRAY_INDEX)
+        {
+            baseArray = arr;
+            index = ind;
+        }
 
-      StatementType sttype;
-   };
+        Type &getType() override { return baseArray->getType().asArray().getType(); }
+        ArrayIndex* copy() override { return new ArrayIndex(baseArray->copy(), index->copy()); }
 
-   class StatementBlock : public Statement{
-   public:
-      STATEMENT_NODE
-      StatementBlock() : Statement(StatementType::BLOCK){}
-      ~StatementBlock()
-      {
-          for (auto& e : block)
-              delete e;
-      }
-      StatementBlock* copy() override
-      { 
-         StatementBlock* b = new StatementBlock();
-         b->block = apply(block.begin(),block.end(),std::function([](Statement* s){ return s->copy(); })); 
-         return b;
-      }
+        Expression* baseArray;
+        Expression* index;
+    };
 
-      vector<Statement*> block;
-   };
+    class TakeReference : public Expression
+    {
+    public:
+        EXPRESSION_NODE
+        TakeReference(Expression* expr) : Expression(ExprType::TAKE_REFERENCE),baseExpr(expr){}
+        Type& getType() override { return ReferenceType::get(baseExpr->getType()); }
+        TakeReference* copy() override { return new TakeReference(baseExpr->copy()); }
 
-   class Assigment : public Statement{
-   public:
-      STATEMENT_NODE
-      Assigment(Variable *var,Expression* expr,bool alloc = false) : Statement(StatementType::ASSIGMENT)
-      {
-         variable = var;
-         this->expr = expr;
-         allocation = alloc;
-      }
+        Expression* baseExpr;
+    };
 
-      ~Assigment() override
-      {
-          delete variable;
-          delete expr;
-      }
-      Assigment* copy() override{ return new Assigment(variable->copy(),expr->copy(),allocation); }
+    class Cast : public Expression
+    {
+    public:
+        EXPRESSION_NODE
+        Cast(Expression* expr, Type &to) : Expression(ExprType::CAST), castTo(to)
+        {
+            this->expr = expr;
+        }
+        Type &getType() override { return castTo; }
+        Cast* copy() override { return new Cast(expr->copy(), castTo); }
 
-      Variable* variable;
-      Expression* expr;
-      bool allocation;
-   };
+        Expression* expr;
+        Type &castTo;
+    };
 
-   class Return : public Statement{
-   public:
-      STATEMENT_NODE
-      Return(Expression* e) : Statement(StatementType::RETURN){
-         expr = e;
-      }
-      ~Return()override { delete expr; }
-      Return* copy() override { return new Return(expr->copy()); }
+    enum class StatementType
+    {
+        ASSIGMENT, RETURN, FUNCTION_CALL, IF_ELSE, WHILE, FOR, BLOCK
+    };
 
-      Expression* expr;
-   };
+    class Statement : public AST_Node
+    {
+    public:
+        Statement(StatementType t)
+        {
+            sttype = t;
+        }
+        virtual ~Statement() {};
+        virtual any operationVisit(StatementVisitor* visitor) = 0;
+        virtual Statement* copy() = 0;
 
-   class If_Else : public Statement{
-   public:
-      STATEMENT_NODE
-      If_Else(Expression* cond,Statement* ifb = nullptr,Statement* elseb = nullptr) : Statement(StatementType::IF_ELSE){
-         condition = cond;
-         ifBlock = ifb;
-         elseBlock = elseb;
-      }
+        StatementType sttype;
+    };
 
-      ~If_Else() override
-      {
-          delete condition;
-          optionalDelete(ifBlock);
-          optionalDelete(elseBlock);
-      }
-      If_Else* copy() override{ return new If_Else(condition->copy(),ifBlock->copy(),elseBlock->copy()); }
+    class StatementBlock : public Statement
+    {
+    public:
+        STATEMENT_NODE
+        StatementBlock() : Statement(StatementType::BLOCK) {}
+        ~StatementBlock()
+        {
+            for (auto &e: block)
+                delete e;
+        }
+        StatementBlock* copy() override
+        {
+            StatementBlock* b = new StatementBlock();
+            b->block = apply(block.begin(), block.end(), std::function([](Statement* s) { return s->copy(); }));
+            return b;
+        }
 
-      Expression* condition;
-      Statement* ifBlock;
-      Statement* elseBlock;
-   };
+        vector<Statement*> block;
+    };
 
-   class While : public Statement{
-   public:
-      STATEMENT_NODE
-      While(Expression* cond,Statement* b = nullptr) : Statement(StatementType::WHILE){
-         condition = cond;
-         block = b;
-      }
-      ~While() override
-      {
-          delete condition;
-          delete block;
-      }
-      While* copy() override{ return new While(condition->copy(),block->copy()); }
+    class Assigment : public Statement
+    {
+    public:
+        STATEMENT_NODE
+        Assigment(Variable* var, Expression* expr, bool decl = false) : Statement(StatementType::ASSIGMENT)
+        {
+            variable = var;
+            this->expr = expr;
+            declaration = decl;
+        }
 
-      Expression* condition;
-      Statement* block;
-   };
+        ~Assigment() override
+        {
+            delete variable;
+            delete expr;
+        }
+        Assigment* copy() override { return new Assigment(variable->copy(), expr->copy(), declaration); }
+        bool isDeclaration() const { return declaration; }
+        Assigment* setDeclaration(bool decl) { this->declaration = decl; return this;}
 
-   class For : public Statement {
-   public:
-       STATEMENT_NODE
+        Variable* variable;
+        Expression* expr;
+    private:
+        bool declaration;
+    };
 
-        For(Statement* b = nullptr) : Statement(StatementType::FOR)
+    class Return : public Statement
+    {
+    public:
+        STATEMENT_NODE
+        Return(Expression* e) : Statement(StatementType::RETURN)
+        {
+            expr = e;
+        }
+        ~Return() override { delete expr; }
+        Return* copy() override { return new Return(expr->copy()); }
+
+        Expression* expr;
+    };
+
+    class If_Else : public Statement
+    {
+    public:
+        STATEMENT_NODE
+        If_Else(Expression* cond, Statement* ifb = nullptr, Statement* elseb = nullptr) : Statement(StatementType::IF_ELSE)
+        {
+            condition = cond;
+            ifBlock = ifb;
+            elseBlock = elseb;
+        }
+
+        ~If_Else() override
+        {
+            delete condition;
+            delete ifBlock;
+            delete elseBlock;
+        }
+        If_Else* copy() override { return new If_Else(condition->copy(), ifBlock->copy(), elseBlock->copy()); }
+
+        Expression* condition;
+        Statement* ifBlock;
+        Statement* elseBlock;
+    };
+
+    class While : public Statement
+    {
+    public:
+        STATEMENT_NODE
+        explicit While(Expression* cond, Statement* b = nullptr) : Statement(StatementType::WHILE)
+        {
+            condition = cond;
+            block = b;
+        }
+        ~While() override
+        {
+            delete condition;
+            delete block;
+        }
+        While* copy() override { return new While(condition->copy(), block->copy()); }
+
+        Expression* condition;
+        Statement* block;
+    };
+
+    class For : public Statement
+    {
+    public:
+        STATEMENT_NODE
+
+        explicit For(Statement* b = nullptr) : Statement(StatementType::FOR)
         {
             block = b;
         }
 
         Statement* block;
-   };
+    };
 
-   struct FunctionNode{
-      struct FunctionIdentifier 
-       { 
-           FunctionIdentifier(string nm, vector<Expression*> args = {}, string p = "") :parentObj(p), name(nm), params(apply(ITER_THROUGH(args), std::function([](Expression* e) -> Type*{
-               return &e->getType();
-           }))){}
-           FunctionIdentifier(string nm, vector<Variable*> args,string p = "") :parentObj(p), name(nm), params(apply(ITER_THROUGH(args), std::function([](Variable* e) -> Type*{
-               return &e->getType();
-           }))) {}
+    struct FunctionNode
+    {
+        struct FunctionIdentifier
+        {
+            FunctionIdentifier(string nm, vector<Expression*> args = {}, string p = "") : parentObj(std::move(p)), name(std::move(nm)), params(apply(ITER_THROUGH(args), std::function([](Expression* e) -> Type* {
+                return &e->getType();
+            }))) {}
+            FunctionIdentifier(string nm, vector<Variable*> args, string p = "") : parentObj(std::move(p)), name(std::move(nm)), params(apply(ITER_THROUGH(args), std::function([](Variable* e) -> Type* {
+                return &e->getType();
+            }))) {}
 
-           FunctionIdentifier(FunctionCall* fcall);
-           
-           bool isField() const { return !parentObj.empty(); }
-           Type& getBaseType() const { return parent; }
-           void setBaseType(Type& t) { parent = t; }
-           string createName() const;
-           bool operator==(const FunctionIdentifier& other) const;
+            FunctionIdentifier(FunctionCall* fcall);
 
-           string getArgumentListStr() const 
-           {
-               if (params.empty())
-                   return "Void";
-               string str = params[0]->getName();
-               for (int i = 1;i < params.size();i++)
-                   str += "," + params[i]->getName();
-               return str;
-           }
+            bool isField() const { return !parentObj.empty(); }
+            Type &getBaseType() const { return parent; }
+            void setBaseType(Type &t) { parent = t; }
+            string createName() const;
+            bool operator==(const FunctionIdentifier &other) const;
 
-           string parentObj;
-           string name; 
-           vector<Type*> params; 
-           Type& parent = Type::get("Void");
-       };
+            string getArgumentListStr() const
+            {
+                if (params.empty())
+                    return "Void";
+                string str = params[0]->getName();
+                for (int i = 1; i < params.size(); i++)
+                    str += "," + params[i]->getName();
+                return str;
+            }
 
-      FunctionIdentifier getFunctionID() const { return FunctionIdentifier(name,formalParams,parent != Type::get("Void") ? parent.getName() : ""); }
+            string parentObj;
+            string name;
+            vector<Type*> params;
+            Type &parent = Type::get("Void");
+        };
 
-      enum Trait
-      {
-          PUBLIC = 0b00000001,CONST = 0b00000010,STATIC = 0b00000100,VIRTUAL = 0b00001000,OVERRIDE = 0b00010000, 
-          EXPLICIT_TYPE = 0b00100000, EXTERNAL_BUILTIN = 0b01000000, VARIADIC = 0b10000000
-      };
+        FunctionIdentifier getFunctionID() const { return {name, formalParams, *parent != Type::get("Void") ? parent->getName() : ""}; }
 
-      Type& returnType = Type::get("Void");
-      vector<Variable*> formalParams;
-      vector<Statement*> ast;
+        enum Trait
+        {
+            PUBLIC = 0b00000001, CONST = 0b00000010, STATIC = 0b00000100, VIRTUAL = 0b00001000, OVERRIDE = 0b00010000,
+            EXPLICIT_TYPE = 0b00100000
+        };
 
-      FunctionNode(string ids,Type& retT = Type::get("Void"), vector<Variable*> formal = {}, vector<Statement*> body = {}, Type& p = Type::get("Void"), unsigned char tr = 0) :
-      name(ids), returnType(retT), formalParams(formal), ast(body), parent(p), traits(tr){}
+        vector<Variable*> formalParams;
+        vector<Statement*> ast;
 
-      ~FunctionNode() 
-      {
-          for (auto& e : formalParams)
-              delete e;
-          for (auto& e : ast)
-              delete e;
-      }
+        FunctionNode(string ids, Type &retT = Type::get("Void"), vector<Variable*> formal = {}, vector<Statement*> body = {}, Type &p = Type::get("Void"), unsigned char tr = 0) :
+                name(ids), returnType(&retT), formalParams(std::move(formal)), ast(body), parent(&p), traits(tr) {}
 
-      void setTrait(Trait t) { traits |= t; }
-      void setTraitList(unsigned char t) { traits = t; }
-      bool hasTrait(Trait t) const { return traits & t; }
-      unsigned int getTraits() const { return traits; }
+        ~FunctionNode()
+        {
+            for (auto &e: formalParams)
+                delete e;
+            for (auto &e: ast)
+                delete e;
+        }
 
-      void setName(string name) { this->name = name; }
-      string getName() const { return name; }
-      string getID() const { return getFunctionID().createName(); }
-      bool isMethod() const { return parent != Type::get("Void"); }
+        void setTrait(Trait t) { traits |= t; }
+        void setTraitList(unsigned char t) { traits = t; }
+        bool hasTrait(Trait t) const { return traits & t; }
+        unsigned int getTraits() const { return traits; }
 
-      void makeMethod(Type& t) { parent = t; }
-      Type& getParent() const { return parent; }
+        void setName(string nm) { name = std::move(nm); }
+        string getName() const { return name; }
+        string getID() const { return getFunctionID().createName(); }
 
-      FunctionNode* copy(string newId = "")
-      {
-         FunctionNode* f = new FunctionNode(name, returnType, {}, {}, parent,traits);
-         f->formalParams = apply(formalParams.begin(),formalParams.end(),std::function([](Variable* v){return v->copy();}));
-         f->ast = apply(ast.begin(),ast.end(),std::function([](Statement* v){return v->copy();}));
-         return f;
-      }
-   private:
-      unsigned char traits = 0;
-      string name;
-      Type& parent;
-   };
+        void setReturnType(Type& t) { returnType = &t; }
+        Type& getReturnType() const { return *returnType; }
 
-   class FunctionCall : public Expression,public Statement{
-   public:
-      STATEMENT_NODE
-      EXPRESSION_NODE
-      FunctionCall(Variable* name,vector<Expression*> arguments = {},FunctionNode* node = nullptr) : Expression(ExprType::FUNCTION_CALL), Statement(StatementType::FUNCTION_CALL) {
-         var = name;
-         this->arguments = arguments;
-         fnode = node;
-      }
+        bool isMethod() const { return *parent != Type::get("Void"); }
+        void makeMethod(Type &t) { parent = &t; }
+        Type &getParent() const { return *parent; }
 
-      ~FunctionCall() override
-      {
-          delete var;
-          for (auto& e : arguments)
-              delete e;
-      }
+        void setAnnotation(Annotation* an) { annotation = an; }
+        Annotation* getAnnotation() { return annotation; }
+        bool hasAnnotation(Annotation::Type t) { return annotation && annotation->getType() == t; }
 
-      void setNode(FunctionNode* node){ fnode = node; }
-      Type& getType() override { return fnode->returnType; }
-      FunctionCall* copy() override{ return new FunctionCall(var->copy(),apply(arguments.begin(),arguments.end(),std::function([](Expression* e){ return e->copy(); }))); }
-      FunctionNode* fnode;
-      Variable* var;
-      vector<Expression*> arguments;
-   };
+        FunctionNode* copy(const string& newId = "")
+        {
+            auto f = new FunctionNode(name, *returnType, {}, {}, *parent, traits);
+            f->formalParams = apply(formalParams.begin(), formalParams.end(), std::function([](Variable* v) { return v->copy(); }));
+            f->ast = apply(ast.begin(), ast.end(), std::function([](Statement* v) { return v->copy(); }));
+            return f;
+        }
+    private:
+        unsigned char traits = 0;
+        string name;
+        Type* parent = &Type::get("Void");
+        Type* returnType = &Type::get("Void");
+        Annotation* annotation = nullptr;
+    };
+
+    class FunctionCall : public Expression, public Statement
+    {
+    public:
+        STATEMENT_NODE
+        EXPRESSION_NODE
+        FunctionCall(Variable* name, vector<Expression*> arguments = {}, FunctionNode* node = nullptr) : Expression(ExprType::FUNCTION_CALL), Statement(StatementType::FUNCTION_CALL)
+        {
+            var = name;
+            this->arguments = arguments;
+            fnode = node;
+        }
+
+        ~FunctionCall() override
+        {
+            delete var;
+            for (auto &e: arguments)
+                delete e;
+        }
+
+        void setNode(FunctionNode* node) { fnode = node; }
+        Type &getType() override { return fnode->getReturnType(); }
+        FunctionCall* copy() override { return new FunctionCall(var->copy(), apply(arguments.begin(), arguments.end(), std::function([](Expression* e) { return e->copy(); }))); }
+        FunctionNode* fnode;
+        Variable* var;
+        vector<Expression*> arguments;
+    };
 }

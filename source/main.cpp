@@ -8,6 +8,5 @@ int main(int argc,char** argv)
    else file = argv[1];
    kvantum::Compiler compiler;
    compiler.compile(file);
+   return 0;
 }
-
-void kvantum::optionalDelete(void* p) { if (p) delete p; }

@@ -2,7 +2,7 @@
 
 namespace kvantum::parser
 {
-   FunctionDefParser::FunctionDefParser(deque<string> &d,Lexer* lexer,Module* m,Compiler* owner) : Parser(d,owner)
+   FunctionDefParser::FunctionDefParser(deque<string> &d,Lexer* lexer,Module* m,Compiler* owner,Annotation* an) : Parser(d,owner)
    {
       this->node = nullptr;
       this->lexer = lexer;
@@ -19,7 +19,7 @@ namespace kvantum::parser
               node->setTrait(FunctionNode::STATIC);
           KVANTUM_VERIFY(mod->hasType(base->id),"no type named "+base->id);
           else {
-            base->type = mod->getType(base->id);
+            base->setType(mod->getType(base->id));
             node->makeMethod(mod->getType(base->id));
           }
       }
@@ -31,7 +31,6 @@ namespace kvantum::parser
       lexer->nextToken().as(Token::FUNCTION);
       Variable* id = parseFunctionIdentifier();
       
-      node->returnType = PrimitiveType::get(PrimitiveType::Void);
       if(false)
          parseFunctional(node);
       else{
@@ -60,7 +59,7 @@ namespace kvantum::parser
               Token name = lexer->nextToken().as(Token::IDENTIFIER);
               lexer->nextToken().as(Token::COLON);
               auto typeOpt = parseType();
-              auto type = typeOpt.value_or(Type::get("Void"));
+              auto type = typeOpt.value_or(&Type::get("Void"));
               KVANTUM_VERIFY(*type != Type::get("Void"),"parameter cannot have Void type");
               params.push_back(new Variable(name.value,*type));
 
@@ -95,13 +94,10 @@ namespace kvantum::parser
       setTraitList(node);
       if (lexer->lookAhead().type == Token::ARROW) {
           lexer->nextToken();
-          auto id = lexer->consumeIf(Token::IDENTIFIER);
-          bool err = !id.has_value();
-          if (!id.has_value() || !isValidType(id.value().value))
-              panic(id.value_or(lexer->lookAhead()).value + " not a valid return type");
-          else
-              node->returnType = getType(id.value().value);
+          auto type = parseType();
+          node->setReturnType(*type.value_or(&Type::get("Void")));
 
+          bool err = lexer->lookAhead().type != Token::LC_BRACKET;
           while (lexer->lookAhead().type != Token::LC_BRACKET)
               lexer->nextToken();
           if (err)

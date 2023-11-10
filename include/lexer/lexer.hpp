@@ -1,4 +1,5 @@
 #pragma once
+
 #include "common/mainheader.hpp"
 #include "common/token.hpp"
 #include <algorithm>
@@ -6,17 +7,17 @@
 #include <queue>
 #include <regex>
 #include <memory>
+
 using std::queue;
 using std::string;
 namespace kvantum::lexer
 {
-   class Lexer
-   {
-   public:
-        string file;
-        Lexer(std::string file_name);
-        Lexer(queue<Token> &toks);
-        Lexer(Lexer& lexer);
+    class Lexer
+    {
+    public:
+        explicit Lexer(const std::string &file_name);
+        explicit Lexer(queue<Token> &toks);
+        Lexer(Lexer &lexer);
         virtual ~Lexer();
         void lex();
         Token nextToken();
@@ -24,22 +25,22 @@ namespace kvantum::lexer
         std::optional<Token> consumeIf(Token::TokenType t);
         bool end();
         void skipUntil(vector<Token::TokenType> t);
-   public:
+    public:
         void printTokens();
         bool err;
-        class UnexpectedEndOfTokens : std::exception{};
+        string file;
 
+        class UnexpectedEndOfTokens : std::exception {};
     private:
-        int tokenizePart(std::string line);
-        void tokenize(std::string line);
+        void tokenize(const std::string &line);
         void initializeRegexes();
-        void setRegex(Token::TokenType t,string reg);
-        bool match(string string,Token::TokenType &type);
+        void setRegex(Token::TokenType t, string reg);
+        bool match(const string &string, Token::TokenType &type);
 
-        vector<std::regex*> regexes;
+        vector<std::regex *> regexes;
         std::ifstream is;
         int lineIndex;
-   protected:
+    protected:
         queue<Token> tokens;
-   };
+    };
 }

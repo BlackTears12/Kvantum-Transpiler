@@ -45,14 +45,16 @@ namespace kvantum
           Public
       };
 
-      virtual ~Type(){}
+      virtual ~Type() = default;
       virtual string getName() const = 0;
       virtual string getTypeID() const { return getName(); }
       virtual bool isObject() const { return false; }
       virtual bool isPrimitive() const { return false; }
       virtual bool isArray() const{ return false; }
       virtual bool isReference() const { return false; }
+      virtual bool isVoid() const { return false; }
       virtual bool equals(Type& other) const = 0;
+      virtual bool weakEquals(Type& other) { return equals(other); }
       virtual unsigned int getAllocSize() = 0;
 
       PrimitiveType& asPrimitive();
@@ -63,21 +65,22 @@ namespace kvantum
       static void initialize();
 
       static Type& get(string name);
-      static const unsigned int getPointerAllocSize() { return 4; }
+      static unsigned int getPointerAllocSize() { return 4; }
 
       friend bool operator==(Type& l, Type& r) { return l.equals(r) || r.equals(l); }
       friend bool operator!=(Type& l, Type& r) { return !(l == r); }
    };
-   
+
    class PrimitiveType : public Type
    {
    public:
-      enum TypeBase{Integer,Rational,Boolean,Char,Void};
-      PrimitiveType(TypeBase b) : type(b){}
+      enum TypeBase{Integer,Float,Boolean,Char,Void};
+      explicit PrimitiveType(TypeBase b) : type(b){}
 
       string getName() const override;
       bool isPrimitive() const override { return true; }
       bool equals(Type& other) const  override { return other.isPrimitive() && other.asPrimitive().type == type; }
+      bool isVoid() const override { return type == TypeBase::Void; }
       unsigned int getAllocSize() override { return 4; }
 
       TypeBase type;
@@ -87,7 +90,7 @@ namespace kvantum
 
       static std::array<PrimitiveType*,TypeBase::Void+1> getTypes() 
       {
-         std::array<PrimitiveType*,types.size()> arr;
+         std::array<PrimitiveType*,types.size()> arr{};
          for (int i = 0; i < arr.size(); i++)
              arr[i] = types[i].get();
          return arr;
@@ -99,8 +102,8 @@ namespace kvantum
    class ObjectType : public Type
    {
    public:
-      ObjectType(TypeNode* node,ObjectType* parent = nullptr) { this->node = node; this->parent = parent; }
-      virtual ~ObjectType() { delete node; }
+      explicit ObjectType(TypeNode* node,ObjectType* parent = nullptr) { this->node = node; this->parent = parent; }
+      ~ObjectType() override { delete node; }
       
       bool isObject() const override { return true; }
       bool equals(Type& other) const override;
@@ -123,10 +126,10 @@ namespace kvantum
       TypeNode* node;
       ObjectType* parent;
    public:
-      static ObjectType& getNone() { return *none.get(); }
+      static ObjectType& getObject() { return *object; }
       static void initialize();
    private:
-       static unique_ptr<ObjectType> none;
+       static unique_ptr<ObjectType> object;
    };
 
    class ArrayType : public Type
@@ -168,7 +171,7 @@ namespace kvantum
        bool isReference() const override { return true; }
        bool equals(Type& other) const override { return other.isReference() && other.asReference().referenceOf == referenceOf; }
    private:
-       ReferenceType(Type& refOf) : referenceOf(refOf){}
+       explicit ReferenceType(Type& refOf) : referenceOf(refOf){}
        Type& referenceOf;
        static map<Type*, ReferenceType*> initatedReferences;
    };

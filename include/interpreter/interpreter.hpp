@@ -24,16 +24,17 @@ namespace kvantum::interpreter
             {"memcpy",memcpy}
         };
     };
+
    using kvantum::parser::SymbolStack;
    class Interpreter : public TreeVisitor,public codegen::CodeExecutorInterface
    {
    IMPLEMENTS_TREE_VISITOR
    public:
-      virtual void generate(Module* mod);
-      virtual void generateFunction(FunctionNode* f);
-      virtual void prototypeFunction(FunctionNode* f);
-      virtual void generateObject(ObjectType* t);
-      virtual void exec();
+      void generate(Module* mod) override;
+      void generateFunction(FunctionNode* f) override;
+      void prototypeFunction(FunctionNode* f) override;
+      void generateObject(ObjectType* t) override;
+      void exec() override;
    private:
       Value* eval(Expression* expr);
       Value* interpretFunction(FunctionNode* func,vector<Value*> args);

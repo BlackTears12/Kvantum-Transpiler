@@ -26,7 +26,7 @@ namespace kvantum
    
    Type& Type::get(string name)
    {
-      std::vector<string> type_str = {"Int","Rat","Bool","Char","Void"};
+      std::vector<string> type_str = {"Int","Float","Bool","Char","Void"};
       auto tp = kvantum::find(type_str.begin(),type_str.end(),name);
       if(tp.has_value())
          return PrimitiveType::get(static_cast<PrimitiveType::TypeBase>(std::distance(type_str.begin(),tp.value())));
@@ -42,7 +42,7 @@ namespace kvantum
 
    string PrimitiveType::getName() const
    {
-      string arr[] = {"Int","Rat","Bool","Str","Void"};
+      string arr[] = {"Int","Float","Bool","Char","Void"};
       return arr[type];
    }
 
@@ -56,7 +56,7 @@ namespace kvantum
 
    bool ObjectType::equals(Type& other) const
    { 
-       if (&getNone() == this)
+       if (&getObject() == this)
            return true;
        return other.isObject() && other.asObject().getNode() == node;
    }
@@ -124,7 +124,7 @@ namespace kvantum
           KVANTUM_VERIFY(parent && parent->hasFunction(name),"no inherited function named "+name);
           else KVANTUM_VERIFY(parent && parent->hasFunction(name) && parent->getFunction(name)->hasTrait(FunctionNode::VIRTUAL), "cannot override a non-virtual function " + name);
           else KVANTUM_VERIFY(parent && parent->hasFunction(name) && (parent->getFunction(name)->getTraits() | FunctionNode::OVERRIDE) == (fnode->getTraits() | FunctionNode::VIRTUAL),
-              "function trait signiture doesnt math with parent function");
+              "function trait signature doesnt math with parent function");
       }
       else if(node->methods.count(name)){
          panic(node->name + "already has method named "+name);
@@ -141,7 +141,7 @@ namespace kvantum
       if(name == "new"){
          fnode->ast.insert(fnode->ast.begin(),new Assigment(new Variable("self", *this), new DynamicAllocation(*this), true));
          fnode->ast.push_back(new Return(new Variable("self", *this)));
-         fnode->returnType = *this;
+         fnode->setReturnType(*this);
       }
    }
 
@@ -173,7 +173,7 @@ namespace kvantum
    
    void ObjectType::initialize()
    {
-       none = std::make_unique<ObjectType>(new TypeNode("None"));
+       object = std::make_unique<ObjectType>(new TypeNode("Object"));
    }
    
    /* ArrayType methods */
@@ -185,7 +185,7 @@ namespace kvantum
            return *iter->second;
 
        ArrayType* arr = new ArrayType(itemT);
-       initiatedArrays.emplace(itemT,arr);
+       initiatedArrays.emplace(&itemT,arr);
        return *arr;
    }
 
@@ -196,9 +196,9 @@ namespace kvantum
            return new FieldAccess(new Variable("self"), new Variable(fieldname));
        };
 
-       node->fields.emplace("_arr",ArrayType::get(t));
-       node->fields.emplace("size", PrimitiveType::get(PrimitiveType::Integer));
-       node->fields.emplace("max_size", PrimitiveType::get(PrimitiveType::Integer));
+       node->fields.emplace("_arr",&ArrayType::get(t));
+       node->fields.emplace("size", &PrimitiveType::get(PrimitiveType::Integer));
+       node->fields.emplace("max_size",&PrimitiveType::get(PrimitiveType::Integer));
 
        /*
             reSize Int -> Void
@@ -267,11 +267,9 @@ namespace kvantum
            /*
                 self.size = 0;
                 self.reSize(arr_size);
-                _c_builtin_::memcpy(self._arr,initializer,arr_size);
            */
            new Assigment(accField("size"),new Literal("0",Type::get("Int"))),
            new FunctionCall(accField("reSize"),{new Variable("arr_size")},reSize),
-           new FunctionCall(new Variable("memcpy"), { accField("_arr"),new Variable("initializer"),new Variable("arr_size") })
        };
        cctor->setTraitList(FunctionNode::STATIC | FunctionNode::CONST | FunctionNode::PUBLIC);
 
@@ -286,7 +284,7 @@ namespace kvantum
        if (iter != initiatedLists.end())
            return *iter->second;
        ListType* lt = new ListType(t);
-       initiatedLists.emplace(t,lt);
+       initiatedLists.emplace(&t,lt);
        return *lt;
    }
 
@@ -303,7 +301,7 @@ namespace kvantum
    }
 
    std::array<unique_ptr<PrimitiveType>,PrimitiveType::Void+1> PrimitiveType::types = {};
-   unique_ptr<ObjectType> ObjectType::none = {};
+   unique_ptr<ObjectType> ObjectType::object = {};
    std::map<Type*, ArrayType*> ArrayType::initiatedArrays = {};
    std::map<Type*, ListType*> ListType::initiatedLists = {};
    std::map<Type*, ReferenceType*> ReferenceType::initatedReferences = {};

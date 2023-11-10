@@ -6,22 +6,22 @@ using std::any;
 namespace kvantum
 {
 /*
-	Clases with derive from StatementVisitor can use this macro to
+	Classes with derive from StatementVisitor can use this macro to
 	declare all the statement visitor methods in an ExpressionVisitor compatible way
 */
 #define IMPLEMENTS_STATEMENT_VISITOR\
-	virtual void visit(StatementBlock*);\
-	virtual void visit(Assigment*);\
-	virtual void visit(If_Else*);\
-	virtual void visit(While*);\
-	virtual void visit(For*);\
-	virtual void visit(Return*);
+	virtual void visit(StatementBlock*) override; \
+	virtual void visit(Assigment*) override;\
+	virtual void visit(If_Else*) override;\
+	virtual void visit(While*) override;\
+	virtual void visit(For*) override;\
+	virtual void visit(Return*) override;
 /*
-	Declares all the statement visitor methods which will be uncompatible with ExpressionVisitor
+	Declares all the statement visitor methods which will be incompatible with ExpressionVisitor
 */
 #define IMPLEMENTS_EXTENDED_STATEMENT_VISITOR\
 	IMPLEMENTS_STATEMENT_VISITOR\
-	virtual any visit(FunctionCall*);
+	virtual any visit(FunctionCall*) override;
 
 	class AST_Node;
 	class Statement;
@@ -34,7 +34,7 @@ namespace kvantum
 	class Return;
 
 	/*
-		class which provides an visitor interface to all STATEMENT_NODEs,
+		class which provides a visitor interface to all STATEMENT_NODEs,
 		using the double-dispatch design pattern
 	*/
 	class StatementVisitor : public virtual AST_NodeOperation

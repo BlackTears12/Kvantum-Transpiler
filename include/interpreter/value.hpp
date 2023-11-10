@@ -54,6 +54,7 @@ namespace kvantum::interpreter
       virtual Value* sub(Value* v) { return new IntValue(value - v->asInt()->value); }
       virtual Value* mul(Value* v) { return new IntValue(value * v->asInt()->value); }
       virtual Value* div(Value* v) { return new IntValue(value / v->asInt()->value); }
+      
 
       virtual int compare(Value* v) 
       {

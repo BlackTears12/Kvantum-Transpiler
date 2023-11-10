@@ -20,7 +20,7 @@
 #define KVANTUM_SKIP nullptr
 #define KVANTUM_VERIFY(cond,errMsg) if(!(cond)) kvantum::Diagnostics::error(errMsg)
 #define KVANTUM_VERIFY_RETURN(cond,errMsg,err) if(!(cond)) { kvantum::Diagnostics::error(errMsg); return err;}
-#define KVANTUM_VERIFY_ABANDON(cond,errMsg) KVANTUM_VERIFY_RETURN(cond,errMsg, ,)
+#define KVANTUM_VERIFY_ABANDON(cond,errMsg) KVANTUM_VERIFY_RETURN(cond,errMsg,;)
 #define KVANTUM_VERIFY_ERROR(cond,errMsg) KVANTUM_VERIFY_RETURN(cond,errMsg,KVANTUM_ERROR)
 
 
@@ -42,6 +42,4 @@ namespace kvantum
         }
         return vec;
     }
-
-    void optionalDelete(void* p);
 }

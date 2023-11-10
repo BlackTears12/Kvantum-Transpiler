@@ -7,7 +7,7 @@ namespace kvantum
     class Module
     {
     public:
-        Module(string n,Compiler* owner);
+        Module(const string& n,Compiler* owner);
         ~Module();
 
         void addFunction(FunctionNode* f) { functions.push_back(f); }

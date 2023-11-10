@@ -8,7 +8,7 @@ namespace kvantum
 	{
 	public:
 		Compiler();
-		void compile(string file);
+		void compile(const string& file);
 		vector<FunctionNode*> getFunctionGroup(string modname,string funcname);
 		ObjectType& getObject(string modname, string objname);
 
@@ -19,7 +19,6 @@ namespace kvantum
 		bool hasModule(string name);
 		void addModule(unique_ptr<Module> mod);
 	private:
-		FunctionNode* createBuiltin(string name);
 		vector<unique_ptr<Module>> modules;
 	};
 }
