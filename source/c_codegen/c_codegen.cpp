@@ -4,22 +4,25 @@ namespace c::codegen
 {
    void CodeGenerator::setModule(string name)
    {
-      modules.push_back(new Module(name));
-      currentModule()->addDependency(modules[0]);
+       modules.push_back(new Module(name));
+       currentModule()->addDependency(modules[0]);
    }
 
-   void CodeGenerator::functionPrototype(string name,Type* returnt,vector<Variable*> args){ currentModule()->functions.push_back(new Function(name)); }
-
-   Function* CodeGenerator::createFunction(string name,c::ast::Type* returnt)
+   void CodeGenerator::functionPrototype(string name, Type *returnt, vector<Variable *> args)
    {
-      auto f = currentModule()->getFunction(name);
-      if(!f){
-         f = new Function(name,returnt);
-         currentModule()->functions.push_back(f);
-      }
-      f->returnType = returnt;
-      setInsertPoint(f->block);
-      return f;
+       currentModule()->functions.push_back(new Function(name));
+   }
+
+   Function *CodeGenerator::createFunction(string name, c::ast::Type *returnt)
+   {
+       auto f = currentModule()->getFunction(name);
+       if (!f) {
+           f = new Function(name, returnt);
+           currentModule()->functions.push_back(f);
+       }
+       f->returnType = returnt;
+       setInsertPoint(f->block);
+       return f;
    }
 
    Struct* CodeGenerator::createStruct(string name, vector<Variable*> fields)
@@ -28,8 +31,8 @@ namespace c::codegen
        if (!tstruct) {
            tstruct = new Struct(name, fields);
            currentModule()->structs.push_back(tstruct);
-       }
-       else tstruct->fields = fields;
+       } else
+           tstruct->fields = fields;
        return tstruct;
    }
 
