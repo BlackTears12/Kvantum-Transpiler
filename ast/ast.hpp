@@ -99,12 +99,13 @@ public:
         OR
     };
 
-    BinaryOperation(Expression *lhs, Expression *rhs, Operator op)
+    BinaryOperation(Expression *lhs, Expression *rhs, Operator op, bool parenthesized = false)
         : Expression(ExprType::BINARY_OPERATION)
     {
         this->op = op;
         this->lhs = lhs;
         this->rhs = rhs;
+        this->parenthesised = parenthesized;
     }
 
     ~BinaryOperation()
@@ -123,11 +124,13 @@ public:
     }
 
     BinaryOperation *copy() override { return new BinaryOperation(lhs->copy(), rhs->copy(), op); }
-    bool isBool() { return op >= EQUAL; }
+    constexpr bool isBool() { return op >= EQUAL; }
+    constexpr bool isParenthesized() const { return parenthesised; }
 
     Expression *lhs;
     Expression *rhs;
     Operator op;
+    bool parenthesised;
 };
 
 class Literal : public Expression
@@ -193,7 +196,7 @@ public:
 
     Type &getType() override { return field->getType(); }
     bool isField() override { return true; }
-    Variable *end() { return field->end(); }
+    Variable *end() override { return field->end(); }
 
     FieldAccess *copy() override { return new FieldAccess(base->copy(), field->copy()); }
     Expression *base;
@@ -319,7 +322,7 @@ class Statement : public AST_Node
 {
 public:
     Statement(StatementType t) { sttype = t; }
-    virtual ~Statement() {};
+    virtual ~Statement() {}
     virtual any operationVisit(StatementVisitor *visitor) = 0;
     virtual Statement *copy() = 0;
 

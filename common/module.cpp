@@ -141,7 +141,7 @@ vector<FunctionNode *>::iterator Module::findFunction(const FunctionNode::Functi
                         [&e](FunctionNode *f) { return e == f->getFunctionID(); });
 }
 
-vector::iterator Module::findType(string name)
+vector<Type *>::iterator Module::findType(string name)
 {
     return std::find_if(ITER_THROUGH(types),
                         std::function([&name](Type *t) { return t->getName() == name; }));

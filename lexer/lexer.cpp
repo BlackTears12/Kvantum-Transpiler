@@ -2,26 +2,11 @@
 
 namespace kvantum::lexer
 {
-    std::vector<string> std_string_split(string str)
-    {
-        std::vector<string> ret;
-        for (int i = 0; i < str.size(); i++) {
-            string s;
-            auto instr = false;
-            while (i < str.size() && (instr || !isspace(str[i]))) {
-                s += str[i];
-                if (str[i] == '\'')
-                    instr = !instr;
-                i++;
-            }
-            //str[i] is whitespace
-            if (!s.empty())
-                ret.push_back(s);
-        }
-        return ret;
-    }
+    Lexer::Lexer(Lexer &lexer)
+        : Lexer(lexer.tokens)
+    {}
 
-    Lexer::Lexer(const string& file_name)
+    Lexer::Lexer(const string &file_name)
     {
         regexes.resize(Token::END_OF_FILE);
         file = file_name;
@@ -33,50 +18,20 @@ namespace kvantum::lexer
             err = true;
             panic("cannot open file " + file_name);
         }
+        lex();
     }
 
-    Lexer::Lexer(queue<Token> &toks) : tokens(std::move(toks)), err(false), lineIndex(0) {}
-
-    Lexer::Lexer(Lexer &lexer) : Lexer(lexer.tokens) {}
+    Lexer::Lexer(queue<Token> &toks)
+        : tokens(std::move(toks))
+        , err(false)
+        , lineIndex(0)
+    {
+        lex();
+    }
 
     Lexer::~Lexer()
     {
         is.close();
-    }
-
-    void Lexer::lex()
-    {
-        string line;
-        while (std::getline(is, line)) {
-            auto parts = std_string_split(line);
-            for (auto &e: parts) {
-                tokenize(e);
-            }
-            lineIndex++;
-        }
-        tokens.emplace(Token::END_OF_FILE, "", file);
-    }
-
-    void Lexer::printTokens()
-    {
-        Token tok;
-        queue<Token> toks(tokens);
-        while (!toks.empty()) {
-            tok = toks.front();
-            toks.pop();
-            Diagnostics::log(tok.typeToString() + " " + tok.value);
-        }
-    }
-
-    bool Lexer::end()
-    {
-        return tokens.empty() || tokens.front().type == Token::END_OF_FILE;
-    }
-
-    void Lexer::skipUntil(vector<Token::TokenType> t)
-    {
-        auto contains = [t](Token::TokenType tok) { return std::find(t.begin(), t.end(), tok) != t.end(); };
-        while (!contains(nextToken().type));
     }
 
     Token Lexer::nextToken()
@@ -102,6 +57,28 @@ namespace kvantum::lexer
         if (tok.type == t)
             return nextToken();
         return {};
+    }
+
+    void Lexer::skipUntil(vector<Token::TokenType> t)
+    {
+        auto contains = [t](Token::TokenType tok) { return std::find(t.begin(), t.end(), tok) != t.end(); };
+        while (!contains(nextToken().type));
+    }
+
+    bool Lexer::end()
+    {
+        return tokens.empty() || tokens.front().type == Token::END_OF_FILE;
+    }
+
+    void Lexer::printTokens()
+    {
+        Token tok;
+        queue<Token> toks(tokens);
+        while (!toks.empty()) {
+            tok = toks.front();
+            toks.pop();
+            Diagnostics::log(tok.typeToString() + " " + tok.value);
+        }
     }
 
     void Lexer::initializeRegexes()
@@ -135,9 +112,9 @@ namespace kvantum::lexer
         setRegex(Token::COLON, ":");
         setRegex(Token::COMMA, ",");
         setRegex(Token::SEMI_COLON, ";");
-        setRegex(Token::AS,"as");
-        setRegex(Token::LET,"let");
-        setRegex(Token::ANNOTATION,"@[a-z]+");
+        setRegex(Token::AS, "as");
+        setRegex(Token::LET, "let");
+        setRegex(Token::ANNOTATION, "@[a-z]+");
         setRegex(Token::WHILE, "while");
         setRegex(Token::FOR, "for");
         setRegex(Token::IF, "if");
@@ -148,10 +125,10 @@ namespace kvantum::lexer
         setRegex(Token::ARROW, "->");
         setRegex(Token::BACK_ARROW, "<-");
         setRegex(Token::DUAL_ARROW, "=>");
-        setRegex(Token::AMPERSAND,"&");
+        setRegex(Token::AMPERSAND, "&");
         setRegex(Token::NAMESPACE_SCOPE, "::");
         setRegex(Token::USE, "use");
-        setRegex(Token::EXTERN,"external");
+        setRegex(Token::EXTERN, "external");
         setRegex(Token::IDENTIFIER, "[a-zA-Z_][a-zA-Z0-9_]*");
     }
 
@@ -160,21 +137,22 @@ namespace kvantum::lexer
         regexes[token] = new std::regex("^" + reg + "$");
     }
 
-    bool Lexer::match(const string& str, Token::TokenType &type)
+    void Lexer::lex()
     {
-        std::smatch match;
-        for (int i = 0; i < regexes.size(); i++) {
-            if (std::regex_match(str, match, *regexes[i])) {
-                type = static_cast<Token::TokenType>(i);
-                return true;
+        string line;
+        while (std::getline(is, line)) {
+            auto parts = std_string_split(line);
+            for (auto &e : parts) {
+                tokenize(e);
             }
+            lineIndex++;
         }
-        return false;
+        tokens.emplace(Token::END_OF_FILE, "", file);
     }
 
     void Lexer::tokenize(const string &line)
     {
-        std::function<int(const string&)> tokenizePart = [this,&tokenizePart](const string &line) {
+        std::function<int(const string &)> tokenizePart = [this, &tokenizePart](const string &line) {
             if (line.empty())
                 return 0;
             Token::TokenType type;
@@ -196,5 +174,17 @@ namespace kvantum::lexer
             }
             idx += incr;
         }
+    }
+
+    bool Lexer::match(const string &str, Token::TokenType &type)
+    {
+        std::smatch match;
+        for (int i = 0; i < regexes.size(); i++) {
+            if (std::regex_match(str, match, *regexes[i])) {
+                type = static_cast<Token::TokenType>(i);
+                return true;
+            }
+        }
+        return false;
     }
 }

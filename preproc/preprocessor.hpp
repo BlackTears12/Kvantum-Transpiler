@@ -6,6 +6,7 @@ using std::deque;
 using std::vector;
 
 namespace kvantum {
+
 class Preprocessor
 {
 public:
@@ -16,4 +17,5 @@ public:
 private:
     deque<string> includes;
 };
+
 } // namespace kvantum

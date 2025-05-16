@@ -93,11 +93,12 @@ namespace kvantum
         }
 
         Diagnostics::log("analysis success");
-        codegen::CodeExecutorInterface* ce = new kvantum::interpreter::Interpreter();
+        auto *ce = new kvantum::codegen::C_Generator();
         for (int i = 0; i < modules.size(); i++) {
             ce->generate(modules[i].get());
         }
         ce->exec();
+        delete ce;
         //std::cout << "code generated" << std::endl;
         //system((string("gcc ")+modules[1]->getName() + ".c -o "+ modules[1]->getName()).c_str());
     }

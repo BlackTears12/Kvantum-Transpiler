@@ -45,6 +45,7 @@ namespace kvantum::parser
 
         optional<Type*> parseType();
         optional<Cast*> parseCast(Expression* base);
+        optional<Expression*> parseBracketedExpression();
         optional<ArrayIndex*> parseArrayIndex(Expression* basearr);
         optional<FieldAccess*> parseFieldAccess(Expression* var);
         optional<BinaryOperation*> parseBop(optional<Expression*> lhs);
@@ -53,6 +54,8 @@ namespace kvantum::parser
         vector<Literal*> parseArrayInitializer(Token::TokenType beg, Token::TokenType end);
         ///arrayexpressions are packed into a [].new cctor call
         optional<ArrayExpression*> parseArrayExpression();
+        Expression* toPrefixForm(Expression* infix) const;
+
     protected:
         //Statement parseing
         Statement* parseStatement();

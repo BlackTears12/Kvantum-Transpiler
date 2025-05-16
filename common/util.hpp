@@ -38,15 +38,29 @@
 using std::string;
 using std::vector;
 
-namespace kvantum
+namespace kvantum {
+
+template<typename Iterator, typename T, typename R>
+vector<R> apply(Iterator begin, Iterator end, std::function<R(T)> func)
 {
-    template <typename Iterator, typename T, typename R>
-    vector<R> apply(Iterator begin, Iterator end, std::function<R(T)> func)
-    {
-        vector<R> vec;
-        while (begin != end) {
-            vec.push_back(func(*begin++));
-        }
-        return vec;
+    vector<R> vec;
+    while (begin != end) {
+        vec.push_back(func(*begin++));
     }
-    } // namespace kvantum
+    return vec;
+}
+
+template<typename Iterator>
+static bool contains(Iterator begin,
+                     Iterator end,
+                     typename std::iterator_traits<Iterator>::value_type item)
+{
+    while (begin != end && *begin != item) {
+        begin++;
+    }
+    return begin != end;
+}
+
+std::vector<string> std_string_split(string str);
+
+} // namespace kvantum

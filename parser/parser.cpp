@@ -56,6 +56,8 @@ namespace kvantum::parser
         return new Cast(base, *type.value());
     }
 
+    optional<Expression*> Parser::parseBracketedExpression() {}
+
     optional<Type*> Parser::parseType()
     {
         if(lexer->lookAhead().type == Token::LSQ_BRACKET){
@@ -172,6 +174,8 @@ namespace kvantum::parser
         return new ArrayExpression(*t, init);
     }
 
+    Expression* Parser::toPrefixForm(Expression* infix) const {}
+
     optional<FunctionCall*> Parser::parseListExpression()
     {
         auto init = parseArrayInitializer(Token::LSQ_BRACKET, Token::RSQ_BRACKET);
@@ -256,6 +260,7 @@ namespace kvantum::parser
         } else
             switch (t.type) {
                 CASE(Token::IDENTIFIER, this_expr = parseVariable(lexer->nextToken()));
+                CASE(Token::L_BRACKET, this_expr = parseBracketedExpression());
                 CASE(Token::NONE, this_expr = new Literal(lexer->nextToken().value, ObjectType::getObject()));
                 CASE(Token::LSQ_BRACKET, this_expr = parseListExpression());
                 CASE(Token::LESS_T, this_expr = parseArrayExpression());
@@ -351,8 +356,8 @@ namespace kvantum::parser
     void Parser::parseFile(Lexer* lexer)
     {
         this->lexer = lexer;
-        FunctionNode* thisfunc = new FunctionNode(lexer->file);
-        auto currmod = std::make_unique<Module>(lexer->file, owner);
+        FunctionNode* thisfunc = new FunctionNode(lexer->getModuleName());
+        auto currmod = std::make_unique<Module>(lexer->getFileName(), owner);
         this->mod = currmod.get();
         owner->addModule(std::move(currmod));
         mod->addFunction(thisfunc);
@@ -386,27 +391,11 @@ namespace kvantum::parser
 
     void Parser::Parse()
     {
-        std::vector<std::pair<lexer::Lexer*, std::thread*>> lexical_analisys;
-        lexical_analisys.reserve(includes.size());
-
-        auto start_lex = [&lexical_analisys](string file) {
-            auto lex = new lexer::Lexer(file);
-            lexical_analisys.push_back({lex, new std::thread(&lexer::Lexer::lex, lex)});
-        };
-
-        //init the lexer and start the threads
-        std::for_each(includes.begin(), includes.end(), start_lex);
-        std::for_each(lexical_analisys.begin(), lexical_analisys.end(), [](std::pair<lexer::Lexer*, std::thread*> &lex_p) {
-            lex_p.second->join();
-            lex_p.first->printTokens();
-        });
-
-        for (auto &e: lexical_analisys) {
-            if (!e.first->err) {
-                parseFile(e.first);
+        for (auto& file : includes) {
+            auto lex = std::make_unique<lexer::Lexer>(file);
+            if (!lex->hasError()) {
+                parseFile(lex.get());
             }
-            delete e.first;
-            delete e.second;
         }
     }
 }
