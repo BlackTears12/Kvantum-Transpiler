@@ -8,6 +8,7 @@
 #include <functional>
 #include <stdint.h>
 #include "common/diagnostics.hpp"
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 #define WINDOWS_PLATFORM true
 #else
@@ -18,8 +19,14 @@
 
 #define KVANTUM_ERROR nullptr
 #define KVANTUM_SKIP nullptr
-#define KVANTUM_VERIFY(cond,errMsg) if(!(cond)) kvantum::Diagnostics::error(errMsg)
-#define KVANTUM_VERIFY_RETURN(cond,errMsg,err) if(!(cond)) { kvantum::Diagnostics::error(errMsg); return err;}
+#define KVANTUM_VERIFY(cond, errMsg) \
+    if (!(cond)) \
+    kvantum::Diagnostics::error(errMsg)
+#define KVANTUM_VERIFY_RETURN(cond, errMsg, err) \
+    if (!(cond)) { \
+        kvantum::Diagnostics::error(errMsg); \
+        return err; \
+    }
 #define KVANTUM_VERIFY_ABANDON(cond,errMsg) KVANTUM_VERIFY_RETURN(cond,errMsg,;)
 #define KVANTUM_VERIFY_ERROR(cond,errMsg) KVANTUM_VERIFY_RETURN(cond,errMsg,KVANTUM_ERROR)
 
@@ -42,4 +49,4 @@ namespace kvantum
         }
         return vec;
     }
-}
+    } // namespace kvantum

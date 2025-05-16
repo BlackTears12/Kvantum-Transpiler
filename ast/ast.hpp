@@ -3,9 +3,9 @@
 #include "ast/annotation.hpp"
 #include "ast/expressionvisitor.hpp"
 #include "ast/statementvisitor.hpp"
-#include "common/mainheader.hpp"
 #include "common/token.hpp"
 #include "common/type.hpp"
+#include "common/util.hpp"
 #include "lexer/lexer.hpp"
 #include <memory>
 #include <optional>

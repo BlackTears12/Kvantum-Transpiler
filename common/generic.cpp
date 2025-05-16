@@ -1,4 +1,4 @@
-#include "common/generic.hpp"
+/*#include "common/generic.hpp"
 #include "common/compiler.hpp"
 
 namespace kvantum
@@ -133,3 +133,4 @@ namespace kvantum
          start_visit(i);
    }
 };
+*/

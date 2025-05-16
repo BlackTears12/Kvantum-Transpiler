@@ -1,5 +1,5 @@
 #pragma once
-#include "common/mainheader.hpp"
+#include "common/util.hpp"
 #include "common/type.hpp"
 
 namespace kvantum::interpreter

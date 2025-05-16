@@ -1,5 +1,5 @@
 #pragma once
-#include "mainheader.hpp"
+#include "util.hpp"
 #include <algorithm>
 #include <array>
 #include <map>
@@ -198,7 +198,7 @@ public:
     static ReferenceType &get(Type &t);
     string getName() const override { return "&" + referenceOf.getName(); }
     unsigned int getAllocSize() override { return Type::getPointerAllocSize(); }
-    Type &getReferencedType() const { return referenceOf; };
+    Type &getReferencedType() const { return referenceOf; }
     bool isReference() const override { return true; }
     bool equals(Type &other) const override
     {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/mainheader.hpp"
+#include "common/util.hpp"
 #include "common/token.hpp"
 #include <algorithm>
 #include <optional>

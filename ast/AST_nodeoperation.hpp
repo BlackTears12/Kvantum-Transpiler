@@ -7,7 +7,7 @@ namespace kvantum {
 class AST_Node;
 
 /*
-        basic class for visitors to inherit from
+    Basic class for visitors to inherit from
 */
 class AST_NodeOperation
 {

@@ -1,5 +1,5 @@
 #pragma once
-#include "mainheader.hpp"
+#include "util.hpp"
 #include <string>
 
 namespace kvantum {

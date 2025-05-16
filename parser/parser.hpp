@@ -7,7 +7,7 @@
 #include <thread>
 #include <optional>
 #include <utility>
-#include "common/mainheader.hpp"
+#include "common/util.hpp"
 #include "lexer/scope.hpp"
 #include "common/token.hpp"
 #include "common/module.hpp"

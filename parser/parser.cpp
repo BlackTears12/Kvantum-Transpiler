@@ -235,7 +235,7 @@ namespace kvantum::parser
          field_access := <identifier>.<identifier>
          arr_index := <expression>[<expression>]
          take_reference := &<expression>
-         case := <expression> as <typename>
+         cast := <expression> as <typename>
          bop := <expression> <binary_operator> <expression>
          binary_operator := + | - | * | - | == | != | and | or
     */

@@ -8,6 +8,7 @@ using std::queue;
 using std::string;
 
 namespace kvantum {
+
 struct Error
 {
     Error(string msg, string mod, unsigned int ln)
@@ -43,4 +44,5 @@ private:
     static string workModule;
     static Verbosity verbosity;
 };
+
 } // namespace kvantum
