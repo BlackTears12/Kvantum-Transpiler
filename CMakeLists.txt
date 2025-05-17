@@ -9,7 +9,7 @@ add_executable(Kvantum-Transpiler
     ast/annotation.hpp
     ast/ast.hpp
     ast/ast.cpp
-    ast/AST_nodeoperation.hpp
+    ast/ast_nodeoperation.hpp
     ast/expressionvisitor.hpp
     ast/statementvisitor.hpp
     ast/treevisitor.hpp
@@ -59,6 +59,7 @@ add_executable(Kvantum-Transpiler
     preproc/preprocessor.cpp
     parser/expressionparser.hpp parser/expressionparser.cpp
     parser/moduleparser.hpp parser/moduleparser.cpp
+    ast/functionnode.hpp ast/functionnode.cpp
 )
 
 include_directories(.)
