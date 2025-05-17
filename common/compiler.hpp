@@ -7,7 +7,6 @@ namespace kvantum
 	class Compiler
 	{
 	public:
-		Compiler();
 		void compile(const string& file);
 		vector<FunctionNode*> getFunctionGroup(string modname,string funcname);
 		ObjectType& getObject(string modname, string objname);
@@ -19,6 +18,14 @@ namespace kvantum
 		bool hasModule(string name);
 		void addModule(unique_ptr<Module> mod);
 	private:
-		vector<unique_ptr<Module>> modules;
-	};
+        Compiler();
+
+        vector<unique_ptr<Module>> modules;
+
+    public:
+        static Compiler& Instance() { return instance; }
+
+    private:
+        static Compiler instance;
+    };
 }

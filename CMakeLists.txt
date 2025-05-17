@@ -30,7 +30,8 @@ add_executable(Kvantum-Transpiler
     common/diagnostics.hpp
     common/generic.hpp
     common/generic.cpp
-    common/mainheader.hpp
+    common/util.hpp
+    common/util.cpp
     common/module.hpp
     common/module.cpp
     common/token.hpp
@@ -48,14 +49,19 @@ add_executable(Kvantum-Transpiler
     parser/functiondefparser.cpp
     parser/parser.hpp
     parser/parser.cpp
-    parser/parser_statement.cpp
+
     parser/symbolstack.hpp
     parser/typechecker.hpp
     parser/typechecker.cpp
+
+
     preproc/preprocessor.hpp
     preproc/preprocessor.cpp
+    parser/expressionparser.hpp parser/expressionparser.cpp
+    parser/moduleparser.hpp parser/moduleparser.cpp
 )
-include_directories(ast codegen c_codegen common interpreter lexer parser preproc)
+
+include_directories(.)
 
 include(GNUInstallDirs)
 install(TARGETS Kvantum-Transpiler

@@ -18,6 +18,7 @@
 using std::deque;
 using std::map;
 using std::optional;
+using std::queue;
 using namespace kvantum::lexer;
 
 namespace kvantum::parser
@@ -25,39 +26,14 @@ namespace kvantum::parser
     class Parser
     {
     public:
-        Parser(deque<string> &includes, Compiler* owner);
-        ~Parser() = default;
-        void Parse();
+        Parser(Module& workMod);
+        virtual ~Parser() = 0;
 
     protected:
-        bool isBop(const Token &t);
-        bool isLiteral(const Token &t);
-        bool isValidType(string type) { return mod->hasType(std::move(type)); }
-        Type &getType(string type) { return mod->getType(std::move(type)); }
+        bool isValidType(const string& type) { return getWorkModule().hasType(type); }
+        Type& getType(const string& type) { return getWorkModule().getType(type); }
+        optional<Type*> parseTypeName();
 
-        void* expressionPanic(const Token& t);
-        void parseArguments(vector<Expression*> &args);
-        void addFunction(FunctionNode* func);
-
-        void parseExternalDependency();
-        Variable* parseVariable(const Token &idToken);
-        optional<FunctionCall*> parseFunctionCall(Expression* var);
-
-        optional<Type*> parseType();
-        optional<Cast*> parseCast(Expression* base);
-        optional<Expression*> parseBracketedExpression();
-        optional<ArrayIndex*> parseArrayIndex(Expression* basearr);
-        optional<FieldAccess*> parseFieldAccess(Expression* var);
-        optional<BinaryOperation*> parseBop(optional<Expression*> lhs);
-        optional<Expression*> parseExpression();
-        optional<FunctionCall*> parseListExpression();
-        vector<Literal*> parseArrayInitializer(Token::TokenType beg, Token::TokenType end);
-        ///arrayexpressions are packed into a [].new cctor call
-        optional<ArrayExpression*> parseArrayExpression();
-        Expression* toPrefixForm(Expression* infix) const;
-
-    protected:
-        //Statement parseing
         Statement* parseStatement();
         StatementBlock* parseStatementBlock();
         Assigment* parseAssigment(Variable* var);
@@ -66,15 +42,22 @@ namespace kvantum::parser
         If_Else* parseIf();
         Return* parseReturn();
 
-    protected:
-        deque<string> &includes;
-        Lexer* lexer;
-        Module* mod;
-        Compiler* owner;
-        Annotation* annotation;
+        /* These expression parsing methods are required by statemenent or function parsers */
+        Variable* parseVariable(const Token& idToken);
+        optional<FieldAccess*> parseFieldAccess(Expression* var);
+        optional<FunctionCall*> parseFunctionCall(Expression* var);
+        void parseArguments(vector<Expression*>& args);
+
+        Lexer& getLexer() const { return *lexers.front(); }
+        void pushLexer(Lexer& lexer) { lexers.push(&lexer); }
+        void popLexer() { lexers.pop(); }
+
+        Module& getWorkModule() const { return *workModule; }
+
     private:
-        void parseFunctionDefinition();
-        void parseTypeDefinition();
-        void parseFile(Lexer* lexer);
+        optional<Expression*> parseExpression();
+
+        queue<Lexer*> lexers;
+        Module* workModule;
     };
 }

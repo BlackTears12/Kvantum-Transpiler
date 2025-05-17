@@ -150,6 +150,7 @@ namespace kvantum
         }
     }
 
+    Compiler Compiler::instance = {};
     map<string, queue<Error>> kvantum::Diagnostics::errors = {};
     unsigned int kvantum::Diagnostics::lineIndex = 0;
     string kvantum::Diagnostics::workModule = "";

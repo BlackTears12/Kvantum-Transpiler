@@ -17,19 +17,21 @@ namespace kvantum::lexer
     class Scope : public Lexer
     {
     public:
-        static optional<unique_ptr<Scope>> nextScope(Lexer *lexer, Token::TokenType begin = Token::LC_BRACKET, Token::TokenType end = Token::RC_BRACKET)
+        static optional<unique_ptr<Scope>> nextScope(Lexer &lexer,
+                                                     Token::TokenType begin = Token::LC_BRACKET,
+                                                     Token::TokenType end = Token::RC_BRACKET)
         {
-            Token t = lexer->nextToken();
+            Token t = lexer.nextToken();
             while (t.type != begin) {
                 panic("symbol " + t.value + " is not a scope begin operator");
-                Token t = lexer->nextToken();
+                Token t = lexer.nextToken();
             }
 
             queue<Token> q;
             q.push(t);
             unsigned int scopeCtr = 1;
             while (scopeCtr > 0) {
-                t = lexer->nextToken();
+                t = lexer.nextToken();
                 if (t.type == Token::END_OF_FILE) {
                     panic("expected end of scope operator");
                     return {};
