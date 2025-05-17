@@ -1,135 +1,137 @@
 #include "parser/functiondefparser.hpp"
 
+#include "expressionparser.hpp"
+
 namespace kvantum::parser {
-FunctionDefParser::FunctionDefParser(
-    deque<string> &d, Lexer *lexer, Module *m, Compiler *owner, Annotation *an)
-    : Parser(d, owner)
+
+FunctionDefParser::FunctionDefParser(Lexer &lexer,
+                                     Module &workMod,
+                                     vector<Annotation *> &annotations)
+    : Parser(workMod)
 {
-    this->node = nullptr;
-    this->lexer = lexer;
-    mod = m;
+    pushLexer(lexer);
 }
 
 Variable *FunctionDefParser::parseFunctionIdentifier()
 {
-    Variable *var = parseVariable(lexer->nextToken().as(Token::IDENTIFIER));
-    node = new FunctionNode(var->id);
+    Variable *var = parseVariable(getLexer().nextToken().as(Token::IDENTIFIER));
+    node = std::make_unique<FunctionNode>(var->id);
     if (var->isField()) {
         auto base = var->as<FieldAccess *>()->base->as<Variable *>();
         if (var->as<FieldAccess *>()->field->id == "new")
             node->setTrait(FunctionNode::STATIC);
-        KVANTUM_VERIFY(mod->hasType(base->id), "no type named " + base->id);
+        KVANTUM_VERIFY(getWorkModule().hasType(base->id), "no type named " + base->id);
         else
         {
-            base->setType(mod->getType(base->id));
-            node->makeMethod(mod->getType(base->id));
+            base->setType(getWorkModule().getType(base->id));
+            node->makeMethod(getWorkModule().getType(base->id));
         }
     }
     return var;
 }
 
-FunctionNode *FunctionDefParser::parseFunctionDecl()
+unique_ptr<FunctionNode> FunctionDefParser::parseFunctionDefinition()
 {
-    lexer->nextToken().as(Token::FUNCTION);
+    getLexer().nextToken().as(Token::FUNCTION);
     Variable *id = parseFunctionIdentifier();
 
     /* TODO implement functional */
     if (false)
-        parseFunctional(node);
+        parseFunctional(node.get());
     else {
         parseFormalParams(node->formalParams);
-        if (lexer->lookAhead().type == Token::DUAL_ARROW)
-            parseConstant(node);
+        if (getLexer().lookAhead().type == Token::DUAL_ARROW)
+            parseConstant(node.get());
         else
-            parseNormal(node);
+            parseNormal(node.get());
     }
-    return node;
+    return std::move(node);
 }
 
 void FunctionDefParser::parseFormalParams(vector<Variable *> &params)
 {
-    Lexer *Origlexer = this->lexer;
-    auto scope = Scope::nextScope(Origlexer, Token::L_BRACKET, Token::R_BRACKET);
+    auto scope = Scope::nextScope(getLexer(), Token::L_BRACKET, Token::R_BRACKET);
     if (!scope.has_value())
         return;
 
-    this->lexer = scope.value().get();
+    pushLexer(*scope.value());
 
     try {
         /// parse the func definition
-        Token t = lexer->nextToken().as(Token::L_BRACKET);
-        while (!lexer->end() && lexer->lookAhead().type != Token::R_BRACKET) {
-            Token name = lexer->nextToken().as(Token::IDENTIFIER);
-            lexer->nextToken().as(Token::COLON);
-            auto typeOpt = parseType();
+        Token t = getLexer().nextToken().as(Token::L_BRACKET);
+        while (!getLexer().end() && getLexer().lookAhead().type != Token::R_BRACKET) {
+            Token name = getLexer().nextToken().as(Token::IDENTIFIER);
+            getLexer().nextToken().as(Token::COLON);
+            auto typeOpt = parseTypeName();
             auto type = typeOpt.value_or(&Type::get("Void"));
             KVANTUM_VERIFY(*type != Type::get("Void"), "parameter cannot have Void type");
             params.push_back(new Variable(name.value, *type));
 
-            if (lexer->lookAhead().type == Token::COMMA)
-                t = lexer->nextToken();
+            if (getLexer().lookAhead().type == Token::COMMA)
+                t = getLexer().nextToken();
         }
-        if (!lexer->end())
-            lexer->nextToken();
+        if (!getLexer().end())
+            getLexer().nextToken();
     }
     /// error while parsing the function
     catch (Lexer::UnexpectedEndOfTokens &) {
+        popLexer();
         panic("Unexpected end of function definition");
     }
-    this->lexer = Origlexer;
+    popLexer();
 }
 
 void FunctionDefParser::parseFunctional(FunctionNode *node) {}
 
 void FunctionDefParser::parseConstant(FunctionNode *node)
 {
-    lexer->nextToken().as(Token::DUAL_ARROW);
-    auto exp = parseExpression();
-    lexer->skipUntil({Token::SEMI_COLON});
+    getLexer().nextToken().as(Token::DUAL_ARROW);
+    ExpressionParser expParser(getLexer(), getWorkModule());
+    auto exp = expParser.parseExpression();
+    getLexer().skipUntil({Token::SEMI_COLON});
     node->ast.push_back(new Return(exp.value_or(nullptr)));
 }
 
 void FunctionDefParser::parseNormal(FunctionNode *node)
 {
     setTraitList(node);
-    if (lexer->lookAhead().type == Token::ARROW) {
-        lexer->nextToken();
-        auto type = parseType();
+    if (getLexer().lookAhead().type == Token::ARROW) {
+        getLexer().nextToken();
+        auto type = parseTypeName();
         node->setReturnType(*type.value_or(&Type::get("Void")));
 
-        bool err = lexer->lookAhead().type != Token::LC_BRACKET;
-        while (lexer->lookAhead().type != Token::LC_BRACKET)
-            lexer->nextToken();
+        bool err = getLexer().lookAhead().type != Token::LC_BRACKET;
+        while (getLexer().lookAhead().type != Token::LC_BRACKET)
+            getLexer().nextToken();
         if (err)
             panic("not a valid function signiture");
         node->setTrait(FunctionNode::EXPLICIT_TYPE);
     }
 
-    Lexer *Origlexer = this->lexer;
-    auto scope = Scope::nextScope(Origlexer, Token::LC_BRACKET, Token::RC_BRACKET);
+    auto scope = Scope::nextScope(getLexer(), Token::LC_BRACKET, Token::RC_BRACKET);
     if (!scope.has_value())
         return;
-    this->lexer = scope.value().get();
+    pushLexer(*scope.value());
 
-    lexer->nextToken().as(Token::LC_BRACKET);
+    getLexer().nextToken().as(Token::LC_BRACKET);
     node->ast = parseStatementBlock()->block;
 
-    this->lexer = Origlexer;
+    popLexer();
 }
 
 void FunctionDefParser::setTraitList(FunctionNode *node)
 {
-    if (lexer->end() || lexer->lookAhead().type != Token::LSQ_BRACKET)
+    if (getLexer().end() || getLexer().lookAhead().type != Token::LSQ_BRACKET)
         return;
-    auto scope = Scope::nextScope(lexer, Token::LSQ_BRACKET, Token::RSQ_BRACKET);
+    auto scope = Scope::nextScope(getLexer(), Token::LSQ_BRACKET, Token::RSQ_BRACKET);
     KVANTUM_VERIFY_ABANDON(scope.has_value(), "invalid trait list");
 
-    auto lex = scope.value().get();
+    pushLexer(*scope.value());
 
     try {
-        lex->nextToken();
-        while (!lex->end() && lex->lookAhead().type != Token::RSQ_BRACKET) {
-            Token next = lex->nextToken().as(Token::IDENTIFIER);
+        getLexer().nextToken();
+        while (!getLexer().end() && getLexer().lookAhead().type != Token::RSQ_BRACKET) {
+            Token next = getLexer().nextToken().as(Token::IDENTIFIER);
             if (next.value == "public")
                 node->setTrait(FunctionNode::PUBLIC);
             else if (next.value == "const")
@@ -143,11 +145,13 @@ void FunctionDefParser::setTraitList(FunctionNode *node)
             else
                 panic("unknown trait " + next.value);
 
-            if (!lex->end() && lex->lookAhead().type == Token::COMMA)
-                lex->nextToken();
+            if (!getLexer().end() && getLexer().lookAhead().type == Token::COMMA)
+                getLexer().nextToken();
         }
     } catch (Lexer::UnexpectedEndOfTokens &) {
+        popLexer();
         panic("Unexpected end of trait list");
     }
+    popLexer();
 }
 } // namespace kvantum::parser

@@ -1,5 +1,6 @@
 #pragma once
 #include "ast/ast.hpp"
+#include "ast/functionnode.hpp"
 
 namespace kvantum {
 class Compiler;
@@ -7,11 +8,11 @@ class Compiler;
 class Module
 {
 public:
-    Module(const string &n, Compiler *owner);
+    Module(const string &n);
     ~Module();
 
-    void addFunction(FunctionNode *f);
-    void addObjectType(ObjectType *t);
+    void addFunction(unique_ptr<FunctionNode> f);
+    void addObjectType(unique_ptr<ObjectType> t);
     void addExternalFunctionDependency(string moduleName, string functionName);
     void addExternalObjectDependency(string modusleName, string typen);
 
@@ -27,7 +28,6 @@ public:
 
     vector<ObjectType *> getObjectTypes();
     vector<FunctionNode *> getFunctions();
-    Compiler *getCompiler();
 
     string getName();
     FunctionNode *getMainFunction();
@@ -38,9 +38,8 @@ private:
 
     string name;
     vector<Type *> types;
-    vector<FunctionNode *> functions;
+    vector<unique_ptr<FunctionNode>> functions;
     unsigned int externalFunctionIndex;
     unsigned int externalTypeIndex;
-    Compiler *owner;
 };
 } // namespace kvantum

@@ -3,7 +3,7 @@
 int main(int argc, char **argv)
 {
     string file = argc > 1 ? argv[1] : "main.kv";
-    kvantum::Compiler compiler;
+    auto compiler = kvantum::Compiler::Instance();
     compiler.compile(file);
     return 0;
 }

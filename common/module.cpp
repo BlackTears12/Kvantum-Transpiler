@@ -3,7 +3,7 @@
 #include <algorithm>
 
 namespace kvantum {
-Module::Module(const string &n, Compiler *owner)
+Module::Module(const string &n)
     : name(n)
 {
     for (auto t : PrimitiveType::getTypes()) {
@@ -12,14 +12,19 @@ Module::Module(const string &n, Compiler *owner)
     types.push_back(&ObjectType::getObject());
     externalFunctionIndex = 0;
     externalTypeIndex = 0;
-    this->owner = owner;
 }
 
-Module::~Module() {}
-
-void Module::addFunction(FunctionNode *f)
+Module::~Module()
 {
-    functions.push_back(f);
+    auto objectTypes = getObjectTypes();
+    for (auto &e : objectTypes) {
+        delete e;
+    }
+}
+
+void Module::addFunction(unique_ptr<FunctionNode> f)
+{
+    functions.push_back(std::move(f));
 }
 
 bool Module::hasInternalFunction(string name)
@@ -39,10 +44,10 @@ bool Module::hasInternalType(string name)
 
 void Module::addExternalFunctionDependency(string moduleName, string funcname)
 {
-    auto funcs = owner->getFunctionGroup(moduleName, funcname);
+    auto funcs = Compiler::Instance().getFunctionGroup(moduleName, funcname);
     for (auto &func : funcs) {
         KVANTUM_VERIFY(func->hasTrait(FunctionNode::PUBLIC),
-                       "cannot use function " + funcname + " becouse its private for module "
+                       "cannot use function " + funcname + " because its private for module "
                            + getName());
         else
         {
@@ -54,7 +59,7 @@ void Module::addExternalFunctionDependency(string moduleName, string funcname)
 
 void Module::addExternalObjectDependency(string moduleName, string typen)
 {
-    types.insert(types.begin(), &owner->getObject(moduleName, typen));
+    types.insert(types.begin(), &Compiler::Instance().getObject(moduleName, typen));
     externalTypeIndex++;
     if ((*types.begin())->isObject()) {
         for (auto &e : (*types.begin())->asObject().getMethods()) {
@@ -110,11 +115,6 @@ vector<FunctionNode *> Module::getFunctions()
     return funcs;
 }
 
-Compiler *Module::getCompiler()
-{
-    return owner;
-}
-
 string Module::getName()
 {
     return name;
@@ -137,18 +137,19 @@ vector<ObjectType *> Module::getObjectTypes()
 vector<FunctionNode *>::iterator Module::findFunction(const FunctionNode::FunctionIdentifier &e)
 {
     ///if its a primive fcall find the function by name
-    return std::find_if(ITER_THROUGH(functions),
-                        [&e](FunctionNode *f) { return e == f->getFunctionID(); });
+    return std::find_if(ITER_THROUGH(functions), [&e](auto &f) { return e == f->getFunctionID(); });
 }
 
 vector<Type *>::iterator Module::findType(string name)
 {
     return std::find_if(ITER_THROUGH(types),
-                        std::function([&name](Type *t) { return t->getName() == name; }));
+                        std::function([&name](auto &t) { return t->getName() == name; }));
 }
 
-void Module::addObjectType(ObjectType *t)
+void Module::addObjectType(unique_ptr<ObjectType> t)
 {
-    types.push_back(t);
+    auto ptr = t.get();
+    t.release();
+    types.push_back(ptr);
 }
 } // namespace kvantum

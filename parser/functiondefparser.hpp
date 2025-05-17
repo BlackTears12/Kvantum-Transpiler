@@ -5,12 +5,8 @@ namespace kvantum::parser {
 class FunctionDefParser : public Parser
 {
 public:
-    FunctionDefParser(deque<string> &d,
-                      Lexer *lexer,
-                      Module *m,
-                      Compiler *owner,
-                      Annotation *annotation = nullptr);
-    FunctionNode *parseFunctionDecl();
+    FunctionDefParser(Lexer &lexer, Module &workMod, vector<Annotation *> &annotations = {});
+    unique_ptr<FunctionNode> parseFunctionDefinition();
 
 private:
     Variable *parseFunctionIdentifier();
@@ -20,6 +16,6 @@ private:
     void parseNormal(FunctionNode *);
     void setTraitList(FunctionNode *node);
 
-    FunctionNode *node;
+    unique_ptr<FunctionNode> node;
 };
 } // namespace kvantum::parser

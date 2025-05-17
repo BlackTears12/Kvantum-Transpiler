@@ -182,6 +182,7 @@ vector<Literal *> ExpressionParser::parseArrayInitializer(Token::TokenType beg, 
             }
         }
     } catch (Lexer::UnexpectedEndOfTokens &) {
+        popLexer();
         panic("invalid array initializer");
     }
     popLexer();

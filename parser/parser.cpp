@@ -209,14 +209,7 @@ optional<FunctionCall*> Parser::parseFunctionCall(Expression* var)
                           "invalid function identifier",
                           {});
     auto* call = new FunctionCall(var->as<Variable*>(), {});
-    // The original code stored and restored a 'lexer' pointer.
-    // With getLexer() returning a reference and pushLexer/popLexer
-    // likely managing an internal lexer stack/pointer, this saving
-    // and restoring of 'lex' might need adjustment depending on
-    // the exact implementation of pushLexer/popLexer and getLexer().
-    // Assuming pushLexer/popLexer handle the active lexer correctly:
     parseArguments(call->arguments);
-    // No explicit lexer restoration needed here if push/pop manage the active one
 
     return call;
 }
@@ -240,6 +233,7 @@ void Parser::parseArguments(vector<Expression*>& args)
         }
         getLexer().nextToken();
     } catch (Lexer::UnexpectedEndOfTokens&) {
+        popLexer();
         panic("Unexpected end of argument list");
     }
     popLexer();

@@ -8,13 +8,13 @@ namespace kvantum::parser {
 class ModuleParser : public Parser
 {
 public:
-    ModuleParser();
+    ModuleParser(const string& fileName);
 
-    unique_ptr<Module> parse(const string& fileName);
+    unique_ptr<Module> parse();
 
 private:
-    void parseFunctionDefinition();
-    void parseTypeDefinition();
+    void parseFunctionDefinition(vector<Annotation*>& annotations);
+    void parseTypeDefinition(vector<Annotation*>& annotations);
     void parseFile(Lexer* lexer);
     void parseExternalDependency();
     void addFunction(unique_ptr<FunctionNode> func);
